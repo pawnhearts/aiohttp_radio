@@ -1,11 +1,9 @@
 import os
 import re
-from json import JSONDecodeError
 
 import aiohttp
 import jinja2
 from aiohttp import web
-from asyncio.subprocess import Process, PIPE
 import asyncio
 import aiohttp_jinja2
 from loguru import logger as log
@@ -43,7 +41,7 @@ async def index(request):
             if ws is not ws_current:
                 await ws.send_json({"action": "sent", "name": name, "text": text})
         for youtube_link in re.findall(
-            r"(?:https?:\/\/)?(?:www\.)?youtu\.?be(?:\.com)?\/?.*(?:watch|embed)?(?:.*v=|v\/|\/)([\w\-_]+)\&?",
+            r"(https:\/\/?(?:www\.)?youtu\.?be\S+)",
             text,
         ):
             await youtube_queue.put(youtube_link)
