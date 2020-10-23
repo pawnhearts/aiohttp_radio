@@ -45,7 +45,7 @@
                log('error');
                break;
              case 'np':
-               $("#np").text(data);
+               $("#np").text(JSON.stringify(data));
                break;
            }
          };
@@ -75,6 +75,7 @@
            $('#send').prop("disabled", false);
          }
        }
+       $(window).load(connect);
        $('#connect').on('click', function() {
          if (conn == null) {
            connect();
@@ -89,7 +90,7 @@
          var text = $('#text').val();
          // log('Sending: ' + text);
          log(`${name}: ${text}`);
-         conn.send(JSON.stringify({'name': name, 'text': text});
+         conn.send(JSON.stringify({'name': name, 'text': text}));
          $('#text').val('').focus();
          return false;
        });
