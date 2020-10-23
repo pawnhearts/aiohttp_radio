@@ -28,17 +28,15 @@
            var data = JSON.parse(e.data);
            switch (data.action) {
              case  'connect':
-               name = data.name;
-               log('Connected as ' + name);
+               log('Connected as ');
                update_ui();
                break;
              case  'disconnect':
-               name = data.name;
-               log('Disconnected ' + name);
+               log('Disconnected ');
                update_ui();
                break;
              case 'join':
-               log('Joined ' + data.name);
+               log('Joined ');
                break;
              case 'sent':
                log(data.name + ': ' + data.text);

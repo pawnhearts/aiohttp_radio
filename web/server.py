@@ -78,7 +78,7 @@ async def now_playing_task(app):
         try:
             data["song"] = out[0]
             data["status"], data["time"], data["progress"] = re.match(
-                r"\[(\w+)\].*\s([\d\:\/]+).*\((.+)\)", out[2]
+                r"\[(\w+)\].*\s([\d\:\/]+).*\((.+)\)\%", out[2]
             ).groups()
             if data["song"] != np:
                 np = data["song"]
