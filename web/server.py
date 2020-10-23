@@ -77,7 +77,7 @@ async def now_playing_task(app):
             ).groups()
             if data["song"] != np:
                 np = data["song"]
-                queued = shell_read(f"{app['mpc_command']} queued").splitlines()
+                queued = await (shell_read(f"{app['mpc_command']} queued")).splitlines()
             data["queued"] = queued
         except Exception as e:
             log.exception(e)
