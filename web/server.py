@@ -34,22 +34,19 @@ async def index(request):
     while True:
         msg = await ws_current.receive_json()
 
-        if msg.type == aiohttp.WSMsgType.text:
-            try:
-                name, text = msg["name"], msg["text"]
-            except KeyError:
-                await ws_current.send_json({"action": "error"})
-                continue
-            for ws in request.app["websockets"]:
-                if ws is not ws_current:
-                    await ws.send_json({"action": "sent", "name": name, "text": text})
-            for youtube_link in re.findall(
-                r"(?:https?:\/\/)?(?:www\.)?youtu\.?be(?:\.com)?\/?.*(?:watch|embed)?(?:.*v=|v\/|\/)([\w\-_]+)\&?",
-                text,
-            ):
-                await youtube_queue.put(youtube_link)
-        else:
-            break
+        try:
+            name, text = msg["name"], msg["text"]
+        except KeyError:
+            await ws_current.send_json({"action": "error"})
+            continue
+        for ws in request.app["websockets"]:
+            if ws is not ws_current:
+                await ws.send_json({"action": "sent", "name": name, "text": text})
+        for youtube_link in re.findall(
+            r"(?:https?:\/\/)?(?:www\.)?youtu\.?be(?:\.com)?\/?.*(?:watch|embed)?(?:.*v=|v\/|\/)([\w\-_]+)\&?",
+            text,
+        ):
+            await youtube_queue.put(youtube_link)
 
     request.app["websockets"].remove(ws_current)
     log.info("disconnected.")
@@ -104,7 +101,7 @@ async def add_from_youtube_task(app):
             "--audio-format",
             "mp3",
             url,
-            "--exec-",
+            "--exec",
             f"{app['mpc_command']} update && {app['mpc_command']} insert {{}}",
             stdout=asyncio.subprocess.PIPE,
         )
