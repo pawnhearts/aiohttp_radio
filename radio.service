@@ -15,6 +15,7 @@ KillMode=mixed
 TimeoutStopSec=5
 PrivateTmp=true
 #Environment=STREAM_URL=http://foobar
+Environment=MOD_MUSIC_DIR=/var/lib/mpd/music/
 Environment=MPD_HOST=127.0.0.1
 
 [Install]
