@@ -134,7 +134,7 @@ async def init_app():
     app.on_startup.append(create_tasks)
     app.on_shutdown.append(shutdown)
 
-    aiohttp_jinja2.setup(app, loader=jinja2.PackageLoader("aiohttp_radio", "templates"))
+    aiohttp_jinja2.setup(app, loader=jinja2.FileSystemLoader("templates"))
 
     app.router.add_get("/", index)
 
