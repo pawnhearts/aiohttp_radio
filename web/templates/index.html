@@ -46,6 +46,9 @@
              case 'error':
                log('error');
                break;
+             case 'np':
+               $("#np").text(data);
+               break;
            }
          };
          conn.onclose = function() {
@@ -73,7 +76,6 @@
            $('#connect').html('Disconnect');
            $('#send').prop("disabled", false);
          }
-         $('#name').text(name);
        }
        $('#connect').on('click', function() {
          if (conn == null) {
@@ -112,6 +114,7 @@
       <button id="connect">Connect</button>&nbsp;|&nbsp;Status:
       <span id="status">disconnected</span>
     </div>
+    <div id="np">Now playing</div>
     <div id="log"
          style="width:20em;height:15em;overflow:auto;border:1px solid black">
     </div>

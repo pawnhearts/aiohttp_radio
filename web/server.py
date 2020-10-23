@@ -70,7 +70,7 @@ async def now_playing_task(app):
     np = None
     queued = []
     while True:
-        data = {}
+        data = {'action': 'np'}
         out = await shell_read(f"{app['mpc_command']} play")
         if not out:
             continue
