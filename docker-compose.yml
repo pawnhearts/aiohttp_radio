@@ -1,0 +1,22 @@
+version: "3.8"
+services:
+  mpd:
+    image:  woahbase/alpine-mpd:x86_64
+      #expose:
+      #  - "6600"
+      #ports:
+      #  - "8008:8008"
+    volumes:
+      - ./mpd.conf:/etc/mpd.conf
+      - ./music:/var/lib/mpd/music
+      - ./playlists:/var/lib/mpd/playlists
+      - ./db:/var/lib/mpd/db
+    restart: always
+  web:
+    build: .
+    restart: always
+    volumes:
+      - ./music:/web/music
+    command: "python3 /web/radio.py"
+    depends_on:
+      - mpd

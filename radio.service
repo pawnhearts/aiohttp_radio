@@ -1,0 +1,21 @@
+[Unit]
+Description=radio web interface
+Requires=mpd.service
+After=network.target
+
+[Service]
+Type=notify
+# the specific user that our service will run as
+User=ph
+Group=ph
+WorkingDirectory=/home/ph/radio/web
+ExecStart=/home/ph/radio/web/venv/bin/python server.py
+ExecReload=/bin/kill -s HUP $MAINPID
+KillMode=mixed
+TimeoutStopSec=5
+PrivateTmp=true
+#Environment=STREAM_URL=http://foobar
+Environment=MPD_HOST=127.0.0.1
+
+[Install]
+WantedBy=multi-user.target
