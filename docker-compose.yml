@@ -17,6 +17,6 @@ services:
     restart: always
     volumes:
       - ./music:/web/music
-    command: "python3 /web/radio.py"
+    command: "python3 /web/server.py"
     depends_on:
       - mpd
