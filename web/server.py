@@ -42,7 +42,7 @@ async def index(request):
                 await ws.send_json({"action": "sent", "name": name, "text": text})
         for youtube_link in re.findall(
             r"(https:\/\/?(?:www\.)?youtu\.?be\S+)",
-            text,
+            text
         ):
             await youtube_queue.put(youtube_link)
 
