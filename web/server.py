@@ -32,11 +32,6 @@ async def index(request):
         await ws.send_json({"action": "join"})
     request.app["websockets"].add(ws_current)
 
-    for ws in request.app["websockets"]:
-        await ws.send_json(
-            {"action": "count", "number": len(request.app["websockets"])}
-        )
-
     for msg in request.app["history"]:
         await ws_current.send_json(msg)
 
@@ -56,17 +51,15 @@ async def index(request):
         msg = {"action": "message", "name": name, "text": text}
         for ws in request.app["websockets"]:
             await ws.send_json(msg)
-        for youtube_link in re.findall(r"(https:\/\/?(?:www\.)?youtu\.?be\S+)", str(text or '')):
+        for youtube_link in re.findall(
+            r"(https:\/\/?(?:www\.)?youtu\.?be\S+)", str(text or "")
+        ):
             await request.app["youtube_queue"].put(youtube_link)
         request.app["history"].append(msg)
         while len(request.app["history"]) > config.history_len:
             request.app["history"].pop(0)
 
     request.app["websockets"].remove(ws_current)
-    for ws in request.app["websockets"]:
-        await ws.send_json(
-            {"action": "count", "number": len(request.app["websockets"])}
-        )
     log.info("disconnected.")
     for ws in request.app["websockets"]:
         await ws.send_json({"action": "disconnect"})
@@ -78,7 +71,7 @@ async def store_mp3_handler(request):
 
     data = await request.post()
 
-    mp3 = data.get('mp3')
+    mp3 = data.get("mp3")
     log.info(mp3)
     if not mp3:
         raise web.HTTPBadRequest
@@ -95,7 +88,7 @@ async def store_mp3_handler(request):
         "insert",
         filename,
         stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE
+        stderr=asyncio.subprocess.PIPE,
     )
     stdout, stderr = await proc.communicate()
     log.debug(stdout.decode())
@@ -107,7 +100,6 @@ async def store_mp3_handler(request):
     #    await ws.send_json({"name": "radiobot", "text": f"file {filename} uploaded"})
 
     return web.HTTPFound("/")
-
 
 
 async def shell_read(cmd):
@@ -135,6 +127,7 @@ async def now_playing_task(app):
                 np = data["song"]
                 queued = (await shell_read(f"{app['mpc_command']} queued")).splitlines()
             data["queued"] = queued
+            data['number_of_users'] = len(app['websockets'])
         except Exception as e:
             log.exception(e)
         for ws in app["websockets"]:
@@ -165,6 +158,16 @@ async def add_from_youtube_task(app):
                 await ws.send_json(
                     {"name": "radiobot", "text": f" added {stdout.decode()}"}
                 )
+
+
+def favicon_handler(path):
+    with open(path, "rb") as f:
+        data = f.read()
+
+    async def handler(request):
+        return web.Response(body=data, content_type="image/png")
+
+    return handler
 
 
 async def create_tasks(app):
@@ -198,6 +201,9 @@ async def init_app():
     app.router.add_post("/upload", store_mp3_handler),
     app.router.add_static("/static", os.path.abspath("static/"), name="static")
     app.router.add_static("/music", os.path.abspath(config.mpd_music_dir), name="music")
+    app.router.add_get(
+        "/favicon.ico", favicon_handler(os.path.abspath("static/favicon.ico"))
+    )
 
     return app
 

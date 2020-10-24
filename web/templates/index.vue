@@ -14,7 +14,7 @@
     </audio>
     <v-app>
       <v-main>
-        <v-container>Number of users: {{count}}</v-container>
+        <v-container>Number of users: <span v-text="number_of_users"></span></v-container>
           <v-card
     class="mx-auto"
     tile
@@ -22,6 +22,7 @@
             <v-card-title v-text="song">
 
             </v-card-title>
+            [ <a :href="'/music/'+song">link</a> ]
             <v-progress-linear
                     v-model="progress"
                     color="purple"
@@ -71,9 +72,8 @@
         filled
         color="deep-purple"
         label="Message"
-        rows="1"
+        rows="3"
       ></v-textarea>
-          <v-text-field v-model="name" value="Anonymous"></v-text-field>
             <v-file-input name="mp3"
   truncate-length="15" label="Mp3 file"
 ></v-file-input>
@@ -96,7 +96,7 @@
       vuetify: new Vuetify(),
       data() {
         return {
-          progress: 0, messages: [], song: '', time: '', queued: [], name: 'Anonymous', text: '', conn: null, count: 0
+          progress: 0, messages: [], song: '', time: '', queued: [], name: 'Anonymous', text: '', conn: null, number_of_users: 0
         };
       },
       mounted() {
@@ -142,14 +142,12 @@
                 // case 'error':
                 //     log('error');
                 //     break;
-                  case 'count':
-                    this.count = data.number;
-                    break;
                 case 'np':
                     this.song = data.song;
                     this.progress = data.progress;
                     this.time = data.time;
                     this.queued = data.queued;
+                    this.number_of_users = data.number_of_users;
                     break;
             }
         };
