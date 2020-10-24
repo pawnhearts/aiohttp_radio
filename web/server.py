@@ -190,7 +190,7 @@ async def init_app():
     )
 
     app.router.add_get("/", index)
-    app.router.add_post("/", store_mp3_handler),
+    app.router.add_post("/upload", store_mp3_handler),
     app.router.add_static("/static", os.path.abspath("static/"), name="static")
     app.router.add_static("/music", os.path.abspath(config.mpd_music_dir), name="music")
 

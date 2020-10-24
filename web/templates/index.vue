@@ -64,7 +64,7 @@
           </v-list-item>
 
     </v-list>
-        <v-form ref="form" action="/" method="post" enctype="multipart/form-data">
+        <v-form ref="form" action="/upload" method="post" enctype="multipart/form-data">
           <v-row><v-col>
           <v-text-field v-model="name" value="Anonymous"></v-text-field>
           </v-col><v-col>
