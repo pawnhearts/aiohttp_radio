@@ -1,3 +1,4 @@
+import itertools
 import json
 import os
 import re
@@ -112,7 +113,7 @@ async def shell_read(cmd):
 async def now_playing_task(app):
     pos = None
     playlist = []
-    while True:
+    for counter in itertools.cycle(range(15)):  # refresh playlist every 15 seconds
         data = {"action": "np"}
         out = await shell_read(f"{app['mpc_command']} play")
         if not out:
@@ -124,7 +125,7 @@ async def now_playing_task(app):
                 r"\[(\w+)\].*\s([\d\:\/]+).*\((.+)\%\)", out[1]
             ).groups()
             data['pos'], data['total'] = map(int, re.search(r'\#(\d+)\/(\d+)\s', out[1]).groups())
-            if data["pos"] != pos:
+            if data["pos"] != pos or counter == 0:
                 pos = data["pos"]
                 playlist = (await shell_read(f"{app['mpc_command']} playlist")).splitlines()
             data["playlist"] = playlist
