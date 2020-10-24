@@ -33,12 +33,13 @@
       <v-subheader>Playlist</v-subheader>
       <v-list-item-group
         color="primary"
-        v-model="pos"
+        v-model="pos0"
         active-class="border"
       >
         <v-list-item
           v-for="(item, i) in playlist"
           :key="i"
+          v-if="i>pos0-5 && i<pos0+5"
         >
           <v-list-item-content>
             <v-list-item-title v-text="item"></v-list-item-title>
@@ -104,6 +105,11 @@
         return {
           progress: 0, messages: [], song: '', time: '', playlist: [], pos: 0, total: 0, name: 'Anonymous', text: '', conn: null, number_of_users: 0, connected: false
         };
+      },
+      computed:{
+        pos0: function(){
+          return this.pos-1;
+        }
       },
       mounted() {
         this.connect();
