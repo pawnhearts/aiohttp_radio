@@ -1,0 +1,26 @@
+[Unit]
+Description=radio web interface
+Requires=mpd.service
+After=network.target
+
+[Service]
+Type=notify
+# the specific user that our service will run as
+User=ph
+Group=ph
+WorkingDirectory=/home/ph/radio/web
+ExecStart=/home/ph/radio/venv/bin/gunicorn server:init_app --chdir /home/ph/radio/web --bind 127.0.0.1:8089 --worker-class aiohttp.worker.GunicornWebWorker
+ExecReload=/bin/kill -s INT $MAINPID
+KillMode=process
+Restart=on-failure
+
+TimeoutStopSec=5
+PrivateTmp=true
+Environment=STREAM_URL=https://pawnhearts.space/stream.ogg
+Environment=MOD_MUSIC_DIR=/var/lib/mpd/music/
+Environment=MPD_HOST=127.0.0.1
+Environment=LISTEN_PORT=8089
+Environment=LISTEN_HOST=127.0.0.1
+
+[Install]
+WantedBy=multi-user.target
