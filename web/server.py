@@ -110,8 +110,8 @@ async def shell_read(cmd):
 
 
 async def now_playing_task(app):
-    np = None
-    queued = []
+    pos = None
+    playlist = []
     while True:
         data = {"action": "np"}
         out = await shell_read(f"{app['mpc_command']} play")
@@ -123,10 +123,11 @@ async def now_playing_task(app):
             data["status"], data["time"], data["progress"] = re.match(
                 r"\[(\w+)\].*\s([\d\:\/]+).*\((.+)\%\)", out[1]
             ).groups()
-            if data["song"] != np:
-                np = data["song"]
-                queued = (await shell_read(f"{app['mpc_command']} queued")).splitlines()
-            data["queued"] = queued
+            data['pos'], data['total'] = re.search(r'\#(\d+)\/(\d+)\s', out[1]).groups()
+            if data["pos"] != pos:
+                pos = data["pos"]
+                playlist = (await shell_read(f"{app['mpc_command']} playlist")).splitlines()
+            data["playlist"] = playlist
             data['number_of_users'] = len(app['websockets'])
         except Exception as e:
             log.exception(e)

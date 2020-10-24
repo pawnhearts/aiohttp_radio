@@ -33,9 +33,11 @@
       <v-subheader>Playlist</v-subheader>
       <v-list-item-group
         color="primary"
+        v-model="pos"
+        active-class="border"
       >
         <v-list-item
-          v-for="(item, i) in queued"
+          v-for="(item, i) in playlist"
           :key="item"
         >
           <v-list-item-content>
@@ -100,7 +102,7 @@
       vuetify: new Vuetify(),
       data() {
         return {
-          progress: 0, messages: [], song: '', time: '', queued: [], name: 'Anonymous', text: '', conn: null, number_of_users: 0, connected: false
+          progress: 0, messages: [], song: '', time: '', playlist: [], pos: 0, total: 0, name: 'Anonymous', text: '', conn: null, number_of_users: 0, connected: false
         };
       },
       mounted() {
@@ -149,7 +151,7 @@
                     this.song = data.song;
                     this.progress = data.progress;
                     this.time = data.time;
-                    this.queued = data.queued;
+                    this.playlist = data.playlist;
                     this.number_of_users = data.number_of_users;
                     break;
             }
