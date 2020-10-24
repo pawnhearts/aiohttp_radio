@@ -32,7 +32,6 @@
     <v-list disabled>
       <v-subheader>Playlist</v-subheader>
       <v-list-item-group
-        v-model="selectedItem"
         color="primary"
       >
         <v-list-item
@@ -60,6 +59,16 @@
           </v-list-item>
 
     </v-list>
+        <f-form ref="form">
+          <v-input v-model="name" value="Anonymous"></v-input>
+          <v-input v-model="text"></v-input>
+              <v-btn
+      class="mr-4"
+      @click="sendMessage"
+    >
+      submit
+    </v-btn>
+        </f-form>
       </v-main>
     </v-app>
   </div>
@@ -72,14 +81,19 @@
       vuetify: new Vuetify(),
       data() {
         return {
-          progress: 0, messages: [], song: '', time: '', queued: []
+          progress: 0, messages: [], song: '', time: '', queued: [], name: [], text: [], conn: null
         };
       },
+      mounted() {
+        this.connect();
+      },
         methods: {
-
+        sendMessage: function () {
+          thos.conn.send(JSON.stringify({'name': this.name, 'text': this.text}));
+        },
             connect: function () {
         let wsUri = (window.location.protocol=='https:'&&'wss://'||'ws://')+window.location.host;
-        const conn = new WebSocket(wsUri);
+        this.conn = new WebSocket(wsUri);
         conn.onopen = () => {
 
         };
