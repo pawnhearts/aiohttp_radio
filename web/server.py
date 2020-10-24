@@ -169,7 +169,7 @@ async def create_tasks(app):
 
 async def init_app():
 
-    app = web.Application()
+    app = web.Application(client_max_size=config.client_max_size)
 
     app["websockets"] = set()
     host = config.mpd_host

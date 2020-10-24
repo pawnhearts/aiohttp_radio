@@ -71,7 +71,7 @@
           <v-text-field v-model="text"></v-text-field>
             </v-col></v-row>
           <v-row><v-col>
-            <v-file-input
+            <v-file-input name="mp3"
   truncate-length="15"
 ></v-file-input>
           </v-col><v-col>
@@ -104,8 +104,8 @@
         methods: {
         sendMessage: function (event) {
           this.conn.send(JSON.stringify({'name': this.name, 'text': this.text}));
-          if(!document.querySelector('input[type="file"]').files.length) {
-            event.preventDefault();
+          if(document.querySelector('input[type="file"]').files.length) {
+            document.forms[0].submit();
           }
 
         },
