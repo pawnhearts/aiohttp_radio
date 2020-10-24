@@ -1,6 +1,8 @@
+import json
 import os
 import re
 
+import aiohttp
 import jinja2
 from aiohttp import web
 import asyncio
@@ -9,6 +11,21 @@ from aiompd import Client as MPDClient
 from loguru import logger as log
 
 from settings import config
+
+
+async def save_file(app, data, filename):
+    filename = os.path.basename(filename)
+    if os.path.splitext(filename)[1].lower() in ['.mp3', '.ogg']:
+        return
+    with open(filename, 'wb') as f:
+        f.write(data)
+    proc = await asyncio.create_subprocess_exec(
+        *(app['mpc_command'].split()),
+        'insert',
+        filename,
+        stdout=asyncio.subprocess.PIPE)
+    if proc.wait() == 0:
+        return filename
 
 
 async def index(request):
@@ -23,6 +40,18 @@ async def index(request):
 
     log.info("joined")
 
+    def callback_factory(ws, request):
+        # not sure how it works
+        async def send_progress_callback(received, out, ws=ws, request=request):
+            if out is request._reader.output:
+                await ws.send_json({'received': received,
+                                        'state': 'uploading'})
+        return send_progress_callback
+
+    callback = callback_factory(ws_current, request)
+
+
+
     await ws_current.send_json({"action": "connect"})
 
     for ws in request.app["websockets"]:
@@ -35,21 +64,43 @@ async def index(request):
     for msg in request.app['history']:
         await ws_current.send_json(msg)
 
-    while True:
-        msg = await ws_current.receive_json()
+    filename, size = '', 0
 
-        try:
-            name, text = msg["name"], msg["text"]
-        except KeyError:
-            await ws_current.send_json({"action": "error"})
-            continue
-        msg = {"action": "message", "name": name, "text": text}
-        for ws in request.app["websockets"]:
-            await ws.send_json(msg)
-        for youtube_link in re.findall(r"(https:\/\/?(?:www\.)?youtu\.?be\S+)", text):
-            await request.app["youtube_queue"].put(youtube_link)
-        request.app['history'].append(msg)
-        request.app['history'] = request.app['history'][-config.history_len:]
+    while not ws_current.closed:
+        msg = await ws_current.receive()
+
+        if msg.type == aiohttp.WSMsgType.text:
+
+            try:
+                msg = json.loads(msg.data)
+            except json.JSONDecodeError:
+                await ws_current.send_json({"action": "error"})
+                continue
+            if 'name' in msg and 'text' in msg:
+                name, text = msg["name"], msg["text"]
+                msg = {"action": "message", "name": name, "text": text}
+                for ws in request.app["websockets"]:
+                    await ws.send_json(msg)
+                for youtube_link in re.findall(r"(https:\/\/?(?:www\.)?youtu\.?be\S+)", text):
+                    await request.app["youtube_queue"].put(youtube_link)
+                request.app['history'].append(msg)
+                while len(request['app'].history) > config.history_len:
+                    request['app'].history.pop(0)
+            elif 'filename' in msg:
+                filename = msg['filename']
+                size = msg.get('size, 0')
+        elif msg.type == aiohttp.WSMsgType.close:
+            o
+        elif msg.type == aiohttp.WSMsgType.error:
+            log.exception(ws_current.exception())
+            break
+        elif msg.tp == aiohttp.WSMsgType.binary:
+            if (await save_file(app, msg.data, filename)):
+                await ws_current.send_json({'action': 'received', 'received': len(msg.data),
+                                        'tezt': 'done'})
+            else:
+                await ws_current.send_json({'action': 'error', 'text': 'file is not supported',
+                                            'state': 'done'})
 
     request.app["websockets"].remove(ws_current)
     for ws in request.aoo["websockets"]:
@@ -59,6 +110,26 @@ async def index(request):
         await ws.send_json({"action": "disconnect"})
 
     return ws_current
+
+
+async def store_mp3_handler(request):
+
+    # WARNING: don't do that if you plan to receive large files!
+    data = await request.post()
+
+    mp3 = data['mp3']
+
+    # .filename contains the name of the file in string format.
+    filename = mp3.filename
+
+    # .file contains the actual file data that needs to be stored somewhere.
+    mp3_file = data['mp3'].file
+
+    content = mp3_file.read()
+
+    return web.Response(body=content,
+                        headers=MultiDict(
+                            {'CONTENT-DISPOSITION': mp3_file}))
 
 
 async def shell_read(cmd):
@@ -146,6 +217,8 @@ async def init_app():
     )
 
     app.router.add_get("/", index)
+    app.router.add_static("/static", os.path.abspath("static/"), name="static")
+    app.router.add_static("/music", os.path.abspath(config.mpd_music_dir), name="music")
 
     return app
 

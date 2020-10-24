@@ -65,14 +65,23 @@
 
     </v-list>
         <v-form ref="form">
+          <v-row><v-col>
           <v-text-field v-model="name" value="Anonymous"></v-text-field>
+          </v-col><v-col>
           <v-text-field v-model="text"></v-text-field>
+            </v-col></v-row>
+          <v-row><v-col>
+            <v-file-input
+  truncate-length="15"
+></v-file-input>
+          </v-col><v-col>
               <v-btn
       class="mr-4"
       @click="sendMessage"
     >
       submit
     </v-btn>
+          </v-col></v-row>
         </v-form>
       </v-main>
     </v-app>
@@ -86,7 +95,7 @@
       vuetify: new Vuetify(),
       data() {
         return {
-          progress: 0, messages: [], song: '', time: '', queued: [], name: [], text: [], conn: null, count: 0
+          progress: 0, messages: [], song: '', time: '', queued: [], name: [], text: [], conn: null, count: 0, size:0, uploaded:0, upload_progress:0
         };
       },
       mounted() {
@@ -95,6 +104,10 @@
         methods: {
         sendMessage: function () {
           this.conn.send(JSON.stringify({'name': this.name, 'text': this.text}));
+          document.querySelector('input[type="file"]').files.forEach((file) => {
+            this.conn.send(JSON.stringify({'name': this.name, 'filename': file.name, 'size': file.size}));
+            this.conn.send(file);
+          })
         },
             connect: function () {
         let wsUri = (window.location.protocol=='https:'&&'wss://'||'ws://')+window.location.host;
@@ -128,6 +141,14 @@
                 // case 'error':
                 //     log('error');
                 //     break;
+                    case 'upload progress':
+                      this.uploaded = data.uploaded;
+                      this.size = data.size;
+                      this.upload_progress = data.uploaded/data.size*100;
+                      break;
+                    case 'count':
+                      this.count = data.number;
+                      break;
                 case 'np':
                     this.song = data.song;
                     this.progress = data.progress;
