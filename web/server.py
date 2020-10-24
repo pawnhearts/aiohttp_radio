@@ -168,6 +168,7 @@ async def save_history_task(app):
         with open(path_tmp, 'w') as f:
             json.dump(app['history'], f)
         os.rename(path_tmp, path)
+        log.info(f'History saved to {path}')
 
 
 
