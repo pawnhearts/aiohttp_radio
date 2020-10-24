@@ -145,6 +145,7 @@ async def add_from_youtube_task(app):
             await ws.send_json({"name": "radiobot", "text": f"got url {url}"})
         proc = await asyncio.create_subprocess_exec(
             "youtube-dl",
+            "-c",
             "-q",
             "-x",
             "--audio-format",

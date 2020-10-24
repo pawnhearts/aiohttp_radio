@@ -36,6 +36,11 @@
         v-model="pos0"
         active-class="border"
       >
+            <v-sheet
+      class="overflow-y-auto"
+      max-height="600"
+      tile
+    >
         <v-list-item
           v-for="(item, i) in playlist"
           :key="i"
@@ -44,10 +49,16 @@
             <v-list-item-title v-text="item"></v-list-item-title>
           </v-list-item-content>
         </v-list-item>
+            </v-sheet>
       </v-list-item-group>
     </v-list>
   </v-card>
         <template v-if="connected">
+              <v-sheet
+      class="overflow-y-auto"
+      max-height="600"
+      tile
+    >
             <v-list two-line>
           <v-list-item :key="item.text" v-for="item in messages">
               <v-list-item-content>
@@ -59,7 +70,7 @@
               </v-list-item-content>
 
           </v-list-item>
-            </v-list>
+            </v-list></v-sheet>
         </template>
         <template v-if="!connected">
           <v-subheader>Disconnected</v-subheader>
