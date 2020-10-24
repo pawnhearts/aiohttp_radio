@@ -160,6 +160,18 @@ async def add_from_youtube_task(app):
                 )
 
 
+async def save_history_task(app):
+    path = app['history_file']
+    path_tmp = f'{path}.tmp'
+    while True:
+        await asyncio.sleep(20)
+        with open(path_tmp, 'w') as f:
+            json.dump(app['history'], f)
+        os.rename(path_tmp, path)
+
+
+
+
 def favicon_handler(path):
     with open(path, "rb") as f:
         data = f.read()
@@ -173,6 +185,7 @@ def favicon_handler(path):
 async def create_tasks(app):
     app["youtube_task"] = asyncio.create_task(add_from_youtube_task(app))
     app["now_playing_task"] = asyncio.create_task(now_playing_task(app))
+    app["save_history_task"] = asyncio.create_task(save_history_task(app))
 
 
 async def init_app():
@@ -183,12 +196,17 @@ async def init_app():
     host = config.mpd_host
     if config.mpd_password:
         host = f"{config.mpd_password}@{host}"
+    app["history_file"] = os.path.abspath('history.json')
+    if os.path.exists(app["history_file"]):
+        with open(app["history_file"], 'r') as f:
+            app['history'] = json.load(f)
+    else:
+        app["history"] = []
     app["mpc_command"] = f"mpc --host '{host}' --port {config.mpd_port}"
     app["stream_url"] = os.environ.get(
         "STREAM_URL", os.path.expandvars("http://$HOSTNAME:8080/stream.ogg")
     )
     app["youtube_queue"] = asyncio.Queue()
-    app["history"] = []
 
     app.on_startup.append(create_tasks)
     app.on_shutdown.append(shutdown)
