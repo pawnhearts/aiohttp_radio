@@ -43,9 +43,9 @@
           </v-list-item-content>
         </v-list-item>
       </v-list-item-group>
-    </v-list></v-col></v-row>
-              </v-container>
+    </v-list>
   </v-card>
+        <template v-if="connected">
             <v-list two-line>
           <v-list-item :key="item.text" v-for="item in messages">
               <v-list-item-content>
@@ -57,8 +57,12 @@
               </v-list-item-content>
 
           </v-list-item>
+            </v-list>
+        </template>
+        <template v-if="!connected">
+          <v-subtitle>Disconnected</v-subtitle>
+        </template>
 
-    </v-list>
         <v-form ref="form" action="/upload" method="post" enctype="multipart/form-data" class="pa-4 pt-6">
       <v-text-field
         v-model="name"
@@ -96,7 +100,7 @@
       vuetify: new Vuetify(),
       data() {
         return {
-          progress: 0, messages: [], song: '', time: '', queued: [], name: 'Anonymous', text: '', conn: null, number_of_users: 0
+          progress: 0, messages: [], song: '', time: '', queued: [], name: 'Anonymous', text: '', conn: null, number_of_users: 0, connected: false
         };
       },
       mounted() {
@@ -112,10 +116,9 @@
         },
             connect: function () {
         let wsUri = (window.location.protocol=='https:'&&'wss://'||'ws://')+window.location.host;
-        this.messages.push({name: 'debug', text:`connecting to ${wsUri}`});
         this.conn = new WebSocket(wsUri);
        this.conn.onopen = () => {
-         this.messages.push({name: 'debug', text:`connected`});
+         this.connected = true;
 
         };
        this.conn.onmessage = (e) => {
@@ -130,9 +133,9 @@
                 //     log('Connected as ' + name);
                 //     update_ui();
                 //     break;
-                 case  'disconnect':
-                     this.connect();
-                     break;
+                //  case  'disconnect':
+                //      this.connect();
+                //      break;
                 // case 'join':
                 //     log('Joined ' + data.name);
                 //     break;
@@ -152,6 +155,7 @@
             }
         };
        this.conn.onclose = () => {
+         this.connected = false;
          this.connect();
         };
     }
