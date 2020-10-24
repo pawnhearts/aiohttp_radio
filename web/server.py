@@ -1,14 +1,14 @@
 import os
 import re
 
-import aiohttp
 import jinja2
 from aiohttp import web
 import asyncio
 import aiohttp_jinja2
+from aiompd import Client as MPDClient
 from loguru import logger as log
 
-youtube_queue = asyncio.Queue()
+from settings import config
 
 
 async def index(request):
@@ -29,6 +29,12 @@ async def index(request):
         await ws.send_json({"action": "join"})
     request.app["websockets"].add(ws_current)
 
+    for ws in request.aoo["websockets"]:
+        ws.send_json({'action': 'count', 'number': len(request.app["websockets"])})
+
+    for msg in request.app['history']:
+        await ws_current.send_json(msg)
+
     while True:
         msg = await ws_current.receive_json()
 
@@ -37,18 +43,19 @@ async def index(request):
         except KeyError:
             await ws_current.send_json({"action": "error"})
             continue
+        msg = {"action": "message", "name": name, "text": text}
         for ws in request.app["websockets"]:
-            if ws is not ws_current:
-                await ws.send_json({"action": "sent", "name": name, "text": text})
-        for youtube_link in re.findall(
-            r"(https:\/\/?(?:www\.)?youtu\.?be\S+)",
-            text
-        ):
-            await youtube_queue.put(youtube_link)
+            await ws.send_json(msg)
+        for youtube_link in re.findall(r"(https:\/\/?(?:www\.)?youtu\.?be\S+)", text):
+            await request.app["youtube_queue"].put(youtube_link)
+        request.app['history'].append(msg)
+        request.app['history'] = request.app['history'][-config.history_len:]
 
     request.app["websockets"].remove(ws_current)
+    for ws in request.aoo["websockets"]:
+        ws.send_json({'action': 'count', 'number': len(request.app["websockets"])})
     log.info("disconnected.")
-    for ws in request.app["websockets"].values():
+    for ws in request.app["websockets"]:
         await ws.send_json({"action": "disconnect"})
 
     return ws_current
@@ -65,7 +72,7 @@ async def now_playing_task(app):
     np = None
     queued = []
     while True:
-        data = {'action': 'np'}
+        data = {"action": "np"}
         out = await shell_read(f"{app['mpc_command']} play")
         if not out:
             continue
@@ -89,7 +96,7 @@ async def now_playing_task(app):
 async def add_from_youtube_task(app):
     os.chdir(os.environ.get("MPD_MUSIC_DIR", "/var/lib/mpd/music"))
     while True:
-        url = await youtube_queue.get()
+        url = await app["youtube_queue"].get()
         for ws in app["websockets"]:
             await ws.send_json({"name": "radiobot", "text": f"got url {url}"})
         proc = await asyncio.create_subprocess_exec(
@@ -121,15 +128,22 @@ async def init_app():
     app = web.Application()
 
     app["websockets"] = set()
-    app["mpc_command"] = f"mpc --host {os.environ.get('MPD_HOST', '127.0.0.1')}"
+    host = config.mpd_host
+    if config.mpd_password:
+        host = f'{config.mpd_password}@{host}'
+    app["mpc_command"] = f"mpc --host '{host}' --port {config.mpd_port}"
     app["stream_url"] = os.environ.get(
         "STREAM_URL", os.path.expandvars("http://$HOSTNAME:8080/stream.ogg")
     )
+    app["youtube_queue"] = asyncio.Queue()
+    app['history'] = []
 
     app.on_startup.append(create_tasks)
     app.on_shutdown.append(shutdown)
 
-    aiohttp_jinja2.setup(app, loader=jinja2.FileSystemLoader(os.path.abspath("templates")))
+    aiohttp_jinja2.setup(
+        app, loader=jinja2.FileSystemLoader(os.path.abspath("templates"))
+    )
 
     app.router.add_get("/", index)
 
@@ -144,7 +158,7 @@ async def shutdown(app):
 
 def main():
     app = init_app()
-    web.run_app(app, port=os.environ.get('PORT', 8888))
+    web.run_app(app, host=config.listen_host, port=config.listen_port)
 
 
 if __name__ == "__main__":

@@ -14,7 +14,7 @@
     </audio>
     <v-app>
       <v-main>
-        <v-container>Hello world</v-container>
+        <v-container>Number of users: {{count}}</v-container>
           <v-card
     class="mx-auto"
     tile
@@ -33,6 +33,7 @@
                   </v-col>
               </v-row>
                 <v-row><v-col cols="2">
+
     <v-list disabled>
       <v-subheader>Playlist</v-subheader>
       <v-list-item-group
@@ -85,7 +86,7 @@
       vuetify: new Vuetify(),
       data() {
         return {
-          progress: 0, messages: [], song: '', time: '', queued: [], name: [], text: [], conn: null
+          progress: 0, messages: [], song: '', time: '', queued: [], name: [], text: [], conn: null, count: 0
         };
       },
       mounted() {
