@@ -13,21 +13,6 @@ from loguru import logger as log
 from settings import config
 
 
-async def save_file(app, data, filename):
-    filename = os.path.basename(filename)
-    if os.path.splitext(filename)[1].lower() in ['.mp3', '.ogg']:
-        return
-    with open(filename, 'wb') as f:
-        f.write(data)
-    proc = await asyncio.create_subprocess_exec(
-        *(app['mpc_command'].split()),
-        'insert',
-        filename,
-        stdout=asyncio.subprocess.PIPE)
-    if proc.wait() == 0:
-        return filename
-
-
 async def index(request):
     ws_current = web.WebSocketResponse()
     ws_ready = ws_current.can_prepare(request)
@@ -40,18 +25,6 @@ async def index(request):
 
     log.info("joined")
 
-    def callback_factory(ws, request):
-        # not sure how it works
-        async def send_progress_callback(received, out, ws=ws, request=request):
-            if out is request._reader.output:
-                await ws.send_json({'received': received,
-                                        'state': 'uploading'})
-        return send_progress_callback
-
-    callback = callback_factory(ws_current, request)
-
-
-
     await ws_current.send_json({"action": "connect"})
 
     for ws in request.app["websockets"]:
@@ -59,52 +32,37 @@ async def index(request):
     request.app["websockets"].add(ws_current)
 
     for ws in request.app["websockets"]:
-        await ws.send_json({'action': 'count', 'number': len(request.app["websockets"])})
+        await ws.send_json(
+            {"action": "count", "number": len(request.app["websockets"])}
+        )
 
-    for msg in request.app['history']:
+    for msg in request.app["history"]:
         await ws_current.send_json(msg)
 
-    filename, size = '', 0
+    filename, size = "", 0
 
     while not ws_current.closed:
-        msg = await ws_current.receive()
+        msg = await ws_current.receive_json()
 
-        if msg.type == aiohttp.WSMsgType.text:
-
-            try:
-                msg = json.loads(msg.data)
-            except json.JSONDecodeError:
-                await ws_current.send_json({"action": "error"})
-                continue
-            if 'name' in msg and 'text' in msg:
-                name, text = msg["name"], msg["text"]
-                msg = {"action": "message", "name": name, "text": text}
-                for ws in request.app["websockets"]:
-                    await ws.send_json(msg)
-                for youtube_link in re.findall(r"(https:\/\/?(?:www\.)?youtu\.?be\S+)", text):
-                    await request.app["youtube_queue"].put(youtube_link)
-                request.app['history'].append(msg)
-                while len(request['app'].history) > config.history_len:
-                    request['app'].history.pop(0)
-            elif 'filename' in msg:
-                filename = msg['filename']
-                size = msg.get('size, 0')
-        elif msg.type == aiohttp.WSMsgType.close:
-            o
-        elif msg.type == aiohttp.WSMsgType.error:
-            log.exception(ws_current.exception())
-            break
-        elif msg.tp == aiohttp.WSMsgType.binary:
-            if (await save_file(app, msg.data, filename)):
-                await ws_current.send_json({'action': 'received', 'received': len(msg.data),
-                                        'tezt': 'done'})
-            else:
-                await ws_current.send_json({'action': 'error', 'text': 'file is not supported',
-                                            'state': 'done'})
+        try:
+            name, text = msg["name"], msg["text"]
+        except KeyError:
+            await ws_current.send_json({"action": "error"})
+            continue
+        msg = {"action": "message", "name": name, "text": text}
+        for ws in request.app["websockets"]:
+            await ws.send_json(msg)
+        for youtube_link in re.findall(r"(https:\/\/?(?:www\.)?youtu\.?be\S+)", text):
+            await request.app["youtube_queue"].put(youtube_link)
+        request.app["history"].append(msg)
+        while len(request["app"].history) > config.history_len:
+            request["app"].history.pop(0)
 
     request.app["websockets"].remove(ws_current)
     for ws in request.aoo["websockets"]:
-        await ws.send_json({'action': 'count', 'number': len(request.app["websockets"])})
+        await ws.send_json(
+            {"action": "count", "number": len(request.app["websockets"])}
+        )
     log.info("disconnected.")
     for ws in request.app["websockets"]:
         await ws.send_json({"action": "disconnect"})
@@ -114,22 +72,37 @@ async def index(request):
 
 async def store_mp3_handler(request):
 
-    # WARNING: don't do that if you plan to receive large files!
     data = await request.post()
 
-    mp3 = data['mp3']
+    mp3 = data["mp3"]
 
-    # .filename contains the name of the file in string format.
-    filename = mp3.filename
+    filename = os.path.basename(mp3.filename)
 
-    # .file contains the actual file data that needs to be stored somewhere.
-    mp3_file = data['mp3'].file
+    if os.path.splitext(filename)[1].lower() in [".mp3", ".ogg"]:
+        raise web.HTTPBadRequest("file extension not supported")
+    with open(filename, "wb") as f:
+        f.write(data["np3"].file.read())
+    proc = await asyncio.create_subprocess_exec(
+        *(request.app["mpc_command"].split()),
+        "insert",
+        filename,
+        stdout=asyncio.subprocess.PIPE,
+    )
+    if (await proc.wait()) == 0:
+        raise web.HTTPBadRequest("file cannot be added")
+
+    for ws in request.app["websockets"]:
+        await ws.send_json({"name": "radiobot", "text": f"file {filename} uploaded"})
+
+    return web.HTTPFound("/")
+
+    mp3_file = data["mp3"].file
 
     content = mp3_file.read()
 
-    return web.Response(body=content,
-                        headers=MultiDict(
-                            {'CONTENT-DISPOSITION': mp3_file}))
+    return web.Response(
+        body=content, headers=MultiDict({"CONTENT-DISPOSITION": mp3_file})
+    )
 
 
 async def shell_read(cmd):
@@ -201,13 +174,13 @@ async def init_app():
     app["websockets"] = set()
     host = config.mpd_host
     if config.mpd_password:
-        host = f'{config.mpd_password}@{host}'
+        host = f"{config.mpd_password}@{host}"
     app["mpc_command"] = f"mpc --host '{host}' --port {config.mpd_port}"
     app["stream_url"] = os.environ.get(
         "STREAM_URL", os.path.expandvars("http://$HOSTNAME:8080/stream.ogg")
     )
     app["youtube_queue"] = asyncio.Queue()
-    app['history'] = []
+    app["history"] = []
 
     app.on_startup.append(create_tasks)
     app.on_shutdown.append(shutdown)
@@ -217,6 +190,7 @@ async def init_app():
     )
 
     app.router.add_get("/", index)
+    app.router.add_post("/", store_mp3_handler),
     app.router.add_static("/static", os.path.abspath("static/"), name="static")
     app.router.add_static("/music", os.path.abspath(config.mpd_music_dir), name="music")
 

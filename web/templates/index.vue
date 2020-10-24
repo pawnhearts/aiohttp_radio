@@ -64,7 +64,7 @@
           </v-list-item>
 
     </v-list>
-        <v-form ref="form">
+        <v-form ref="form" action="/" method="post" enctype="multipart/form-data">
           <v-row><v-col>
           <v-text-field v-model="name" value="Anonymous"></v-text-field>
           </v-col><v-col>
@@ -102,12 +102,12 @@
         this.connect();
       },
         methods: {
-        sendMessage: function () {
+        sendMessage: function (event) {
           this.conn.send(JSON.stringify({'name': this.name, 'text': this.text}));
-          document.querySelector('input[type="file"]').files.forEach((file) => {
-            this.conn.send(JSON.stringify({'name': this.name, 'filename': file.name, 'size': file.size}));
-            this.conn.send(file);
-          })
+          if(!document.querySelector('input[type="file"]').files.length) {
+            event.preventDefault();
+          }
+
         },
             connect: function () {
         let wsUri = (window.location.protocol=='https:'&&'wss://'||'ws://')+window.location.host;
@@ -141,11 +141,6 @@
                 // case 'error':
                 //     log('error');
                 //     break;
-                    case 'upload progress':
-                      this.uploaded = data.uploaded;
-                      this.size = data.size;
-                      this.upload_progress = data.uploaded/data.size*100;
-                      break;
                     case 'count':
                       this.count = data.number;
                       break;
