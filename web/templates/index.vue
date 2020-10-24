@@ -38,7 +38,7 @@
       >
         <v-list-item
           v-for="(item, i) in playlist"
-          :key="item"
+          :key="i"
         >
           <v-list-item-content>
             <v-list-item-title v-text="item"></v-list-item-title>
@@ -62,7 +62,7 @@
             </v-list>
         </template>
         <template v-if="!connected">
-          <v-subtitle>Disconnected</v-subtitle>
+          <v-subheader>Disconnected</v-subheader>
         </template>
 
         <v-form ref="form" action="/upload" method="post" enctype="multipart/form-data" class="pa-4 pt-6">
@@ -153,6 +153,8 @@
                     this.time = data.time;
                     this.playlist = data.playlist;
                     this.number_of_users = data.number_of_users;
+                    this.pos = data.pos;
+                    this.total = data.total;
                     break;
             }
         };

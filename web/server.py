@@ -123,7 +123,7 @@ async def now_playing_task(app):
             data["status"], data["time"], data["progress"] = re.match(
                 r"\[(\w+)\].*\s([\d\:\/]+).*\((.+)\%\)", out[1]
             ).groups()
-            data['pos'], data['total'] = re.search(r'\#(\d+)\/(\d+)\s', out[1]).groups()
+            data['pos'], data['total'] = map(int, re.search(r'\#(\d+)\/(\d+)\s', out[1]).groups())
             if data["pos"] != pos:
                 pos = data["pos"]
                 playlist = (await shell_read(f"{app['mpc_command']} playlist")).splitlines()
