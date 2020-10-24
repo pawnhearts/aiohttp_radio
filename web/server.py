@@ -29,8 +29,8 @@ async def index(request):
         await ws.send_json({"action": "join"})
     request.app["websockets"].add(ws_current)
 
-    for ws in request.aoo["websockets"]:
-        ws.send_json({'action': 'count', 'number': len(request.app["websockets"])})
+    for ws in request.app["websockets"]:
+        await ws.send_json({'action': 'count', 'number': len(request.app["websockets"])})
 
     for msg in request.app['history']:
         await ws_current.send_json(msg)
@@ -53,7 +53,7 @@ async def index(request):
 
     request.app["websockets"].remove(ws_current)
     for ws in request.aoo["websockets"]:
-        ws.send_json({'action': 'count', 'number': len(request.app["websockets"])})
+        await ws.send_json({'action': 'count', 'number': len(request.app["websockets"])})
     log.info("disconnected.")
     for ws in request.app["websockets"]:
         await ws.send_json({"action": "disconnect"})

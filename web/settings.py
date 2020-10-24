@@ -1,9 +1,9 @@
-import os, socket
+import os, socket, inspect
 
 
 class Config:
     def __init__(self):
-        for key, value in self.__class__.__dict__.values():
+        for key, value in inspect.getmembers(Config):
             if key.startswith('_'):
                 continue
             setattr(self, key, self.__annotations__[key](os.environ.get(key.upper(), value)))
