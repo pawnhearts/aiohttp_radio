@@ -18,7 +18,7 @@ async def index(request):
     ws_ready = ws_current.can_prepare(request)
     if not ws_ready.ok:
         return aiohttp_jinja2.render_template(
-            "index.html", request, {"stream_url": request.app["stream_url"]}
+            "index.vue", request, {"stream_url": request.app["stream_url"]}
         )
 
     await ws_current.prepare(request)
