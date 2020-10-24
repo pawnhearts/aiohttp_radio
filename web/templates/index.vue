@@ -22,17 +22,11 @@
             <v-card-title v-text="song">
 
             </v-card-title>
-            <v-container>
-              <v-row>
-                <v-col>{{time}}</v-col>
-                  <v-col>
             <v-progress-linear
                     v-model="progress"
                     color="purple"
             ></v-progress-linear>
-                  </v-col>
-              </v-row>
-                <v-row><v-col cols="2">
+            <v-card-text v-text="time"></v-card-text>
 
     <v-list disabled>
       <v-subheader>Playlist</v-subheader>
@@ -52,7 +46,7 @@
               </v-container>
   </v-card>
             <v-list two-line>
-          <v-list-item :key="item.title" v-for="item in messages">
+          <v-list-item :key="item.text" v-for="item in messages">
               <v-list-item-content>
                 <v-list-item-title v-text="item.name"></v-list-item-title>
 
@@ -64,24 +58,31 @@
           </v-list-item>
 
     </v-list>
-        <v-form ref="form" action="/upload" method="post" enctype="multipart/form-data">
-          <v-row><v-col>
+        <v-form ref="form" action="/upload" method="post" enctype="multipart/form-data" class="pa-4 pt-6">
+      <v-text-field
+        v-model="name"
+        filled
+        color="deep-purple"
+        label="Name"
+      ></v-text-field>
+      <v-textarea
+        v-model="text"
+        auto-grow
+        filled
+        color="deep-purple"
+        label="Message"
+        rows="1"
+      ></v-textarea>
           <v-text-field v-model="name" value="Anonymous"></v-text-field>
-          </v-col><v-col>
-          <v-text-field v-model="text"></v-text-field>
-            </v-col></v-row>
-          <v-row><v-col>
             <v-file-input name="mp3"
-  truncate-length="15"
+  truncate-length="15" label="Mp3 file"
 ></v-file-input>
-          </v-col><v-col>
               <v-btn
       class="mr-4"
       @click="sendMessage"
     >
       submit
     </v-btn>
-          </v-col></v-row>
         </v-form>
       </v-main>
     </v-app>
@@ -95,7 +96,7 @@
       vuetify: new Vuetify(),
       data() {
         return {
-          progress: 0, messages: [], song: '', time: '', queued: [], name: [], text: [], conn: null, count: 0, size:0, uploaded:0, upload_progress:0
+          progress: 0, messages: [], song: '', time: '', queued: [], name: 'Anonymous', text: '', conn: null, count: 0
         };
       },
       mounted() {
@@ -103,16 +104,18 @@
       },
         methods: {
         sendMessage: function (event) {
-          this.conn.send(JSON.stringify({'name': this.name, 'text': this.text}));
           if(document.querySelector('input[type="file"]').files.length) {
             document.forms[0].submit();
+          }else{
+            this.conn.send(JSON.stringify({'name': this.name, 'text': this.text}));
           }
-
         },
             connect: function () {
         let wsUri = (window.location.protocol=='https:'&&'wss://'||'ws://')+window.location.host;
+        this.messages.push({name: 'debug', text:`connecting to ${wsUri}`});
         this.conn = new WebSocket(wsUri);
        this.conn.onopen = () => {
+         this.messages.push({name: 'debug', text:`connected`});
 
         };
        this.conn.onmessage = (e) => {
@@ -127,11 +130,9 @@
                 //     log('Connected as ' + name);
                 //     update_ui();
                 //     break;
-                // case  'disconnect':
-                //     name = data.name;
-                //     log('Disconnected ' + name);
-                //     update_ui();
-                //     break;
+                 case  'disconnect':
+                     this.connect();
+                     break;
                 // case 'join':
                 //     log('Joined ' + data.name);
                 //     break;
@@ -141,9 +142,9 @@
                 // case 'error':
                 //     log('error');
                 //     break;
-                    case 'count':
-                      this.count = data.number;
-                      break;
+                  case 'count':
+                    this.count = data.number;
+                    break;
                 case 'np':
                     this.song = data.song;
                     this.progress = data.progress;
@@ -153,7 +154,7 @@
             }
         };
        this.conn.onclose = () => {
-
+         this.connect();
         };
     }
         }

@@ -7,6 +7,7 @@ import jinja2
 from aiohttp import web
 import asyncio
 import aiohttp_jinja2
+from shlex import split
 from aiompd import Client as MPDClient
 from loguru import logger as log
 
@@ -42,7 +43,10 @@ async def index(request):
     filename, size = "", 0
 
     while not ws_current.closed:
-        msg = await ws_current.receive_json()
+        try:
+            msg = await ws_current.receive_json()
+        except TypeError:
+            break
 
         try:
             name, text = msg["name"], msg["text"]
@@ -52,14 +56,14 @@ async def index(request):
         msg = {"action": "message", "name": name, "text": text}
         for ws in request.app["websockets"]:
             await ws.send_json(msg)
-        for youtube_link in re.findall(r"(https:\/\/?(?:www\.)?youtu\.?be\S+)", text):
+        for youtube_link in re.findall(r"(https:\/\/?(?:www\.)?youtu\.?be\S+)", str(text or '')):
             await request.app["youtube_queue"].put(youtube_link)
         request.app["history"].append(msg)
-        while len(request["app"].history) > config.history_len:
-            request["app"].history.pop(0)
+        while len(request.app["history"]) > config.history_len:
+            request.app["history"].pop(0)
 
     request.app["websockets"].remove(ws_current)
-    for ws in request.aoo["websockets"]:
+    for ws in request.app["websockets"]:
         await ws.send_json(
             {"action": "count", "number": len(request.app["websockets"])}
         )
@@ -74,35 +78,36 @@ async def store_mp3_handler(request):
 
     data = await request.post()
 
-    mp3 = data["mp3"]
+    mp3 = data.get('mp3')
+    log.info(mp3)
+    if not mp3:
+        raise web.HTTPBadRequest
 
     filename = os.path.basename(mp3.filename)
+    log.info(filename)
 
-    if os.path.splitext(filename)[1].lower() in [".mp3", ".ogg"]:
-        raise web.HTTPBadRequest("file extension not supported")
+    if os.path.splitext(filename)[1].lower() not in [".mp3", ".ogg"]:
+        raise web.HTTPBadRequest
     with open(filename, "wb") as f:
-        f.write(data["np3"].file.read())
+        f.write(mp3.file.read())
     proc = await asyncio.create_subprocess_exec(
-        *(request.app["mpc_command"].split()),
+        *split(request.app["mpc_command"]),
         "insert",
         filename,
         stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE
     )
-    if (await proc.wait()) == 0:
-        raise web.HTTPBadRequest("file cannot be added")
+    stdout, stderr = await proc.communicate()
+    log.debug(stdout.decode())
+    log.debug(stderr.decode())
+    if proc.returncode != 0:
+        raise web.HTTPBadRequest
 
-    for ws in request.app["websockets"]:
-        await ws.send_json({"name": "radiobot", "text": f"file {filename} uploaded"})
+    # for ws in request.app["websockets"]:
+    #    await ws.send_json({"name": "radiobot", "text": f"file {filename} uploaded"})
 
     return web.HTTPFound("/")
 
-    mp3_file = data["mp3"].file
-
-    content = mp3_file.read()
-
-    return web.Response(
-        body=content, headers=MultiDict({"CONTENT-DISPOSITION": mp3_file})
-    )
 
 
 async def shell_read(cmd):
