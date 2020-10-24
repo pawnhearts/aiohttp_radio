@@ -39,7 +39,6 @@
         <v-list-item
           v-for="(item, i) in playlist"
           :key="i"
-          v-if="i>pos0-5 && i<pos0+5"
         >
           <v-list-item-content>
             <v-list-item-title v-text="item"></v-list-item-title>
