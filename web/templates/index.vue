@@ -8,6 +8,10 @@
 </head>
 <body>
   <div id="app">
+    <audio controls autoplay>
+      <source src="{{stream_url}}" type="audio/ogg">
+      Your browser does not support the audio tag.
+    </audio>
     <v-app>
       <v-main>
         <v-container>Hello world</v-container>
@@ -59,16 +63,16 @@
           </v-list-item>
 
     </v-list>
-        <f-form ref="form">
-          <v-input v-model="name" value="Anonymous"></v-input>
-          <v-input v-model="text"></v-input>
+        <v-form ref="form">
+          <v-text-field v-model="name" value="Anonymous"></v-text-field>
+          <v-text-field v-model="text"></v-text-field>
               <v-btn
       class="mr-4"
       @click="sendMessage"
     >
       submit
     </v-btn>
-        </f-form>
+        </v-form>
       </v-main>
     </v-app>
   </div>
@@ -94,10 +98,10 @@
             connect: function () {
         let wsUri = (window.location.protocol=='https:'&&'wss://'||'ws://')+window.location.host;
         this.conn = new WebSocket(wsUri);
-        conn.onopen = () => {
+       this.conn.onopen = () => {
 
         };
-        conn.onmessage = (e) => {
+       this.conn.onmessage = (e) => {
             let data = JSON.parse(e.data);
             if(data.text) {
                 this.messages.push(data);
@@ -131,7 +135,7 @@
                     break;
             }
         };
-        conn.onclose = () => {
+       this.conn.onclose = () => {
 
         };
     }
