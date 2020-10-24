@@ -94,7 +94,7 @@
       },
         methods: {
         sendMessage: function () {
-          thos.conn.send(JSON.stringify({'name': this.name, 'text': this.text}));
+          this.conn.send(JSON.stringify({'name': this.name, 'text': this.text}));
         },
             connect: function () {
         let wsUri = (window.location.protocol=='https:'&&'wss://'||'ws://')+window.location.host;
