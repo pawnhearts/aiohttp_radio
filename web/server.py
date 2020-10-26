@@ -231,7 +231,7 @@ async def init_app():
     )
     app["youtube_queue"] = asyncio.Queue()
 
-    # app.on_startup.append(create_tasks)
+    app.on_startup.append(create_tasks)
     app.on_shutdown.append(shutdown)
     from bot import init_bot
 
