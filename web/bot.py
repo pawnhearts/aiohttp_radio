@@ -34,6 +34,8 @@ async def echo(message: types.Message):
     ):
         await bot.web_app["youtube_queue"].put(youtube_link)
     # or reply INTO webhook
+    for ws in bot.web_app['websockets']:
+        await ws.send_json({"action": "message", "name": message.from_user.username, "text": message.text})
     # return SendMessage(message.chat.id, message.text)
 
 

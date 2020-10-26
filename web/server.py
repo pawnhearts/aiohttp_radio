@@ -50,6 +50,8 @@ async def index(request):
         msg = {"action": "message", "name": name, "text": text}
         for ws in request.app["websockets"]:
             await ws.send_json(msg)
+        if request.app["bot"]:
+            await request.app["bot"].send_message(config.bot_group_id, f"{name}: {text}")
         for youtube_link in re.findall(
             r"(https:\/\/?(?:www\.)?youtu\.?be\S+)", str(text or "")
         ):
@@ -138,7 +140,7 @@ async def now_playing_task(app):
                 new_playlist = (
                     await shell_read(f"{app['mpc_command']} playlist")
                 ).splitlines()
-                if set(new_playlist) - set(playlist):
+                if set(new_playlist) - set(playlist) and playlist:
                     await app["bot"].send_message(
                         config.bot_group_id,
                         f"added to playlist: {', '.join(set(new_playlist) - set(playlist))}",
@@ -216,6 +218,7 @@ async def init_app():
     app = web.Application(client_max_size=config.client_max_size)
 
     app["websockets"] = set()
+    app["bot"] = None
     host = config.mpd_host
     if config.mpd_password:
         host = f"{config.mpd_password}@{host}"

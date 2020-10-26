@@ -60,7 +60,7 @@
       tile
     >
             <v-list two-line>
-          <v-list-item :key="item.text" v-for="item in messages">
+          <v-list-item :key="i" v-for="(item, i) in messages">
               <v-list-item-content>
                 <v-list-item-title v-text="item.name"></v-list-item-title>
 
