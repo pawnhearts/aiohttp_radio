@@ -9,9 +9,7 @@ from aiohttp import web
 import asyncio
 import aiohttp_jinja2
 from shlex import split
-from aiompd import Client as MPDClient
 from loguru import logger as log
-
 from settings import config
 
 
@@ -113,6 +111,7 @@ async def shell_read(cmd):
 async def now_playing_task(app):
     pos = None
     playlist = []
+    song = None
     for counter in itertools.cycle(range(15)):  # refresh playlist every 15 seconds
         data = {"action": "np"}
         out = await shell_read(f"{app['mpc_command']} play")
@@ -121,15 +120,33 @@ async def now_playing_task(app):
         out = out.splitlines()
         try:
             data["song"] = out[0]
+            if song != data["song"]:
+                song = data["song"]
+                if app["bot"]:
+                    await app["bot"].send_message(
+                        config.bot_group_id, f"now playing {song}"
+                    )
+
             data["status"], data["time"], data["progress"] = re.match(
                 r"\[(\w+)\].*\s([\d\:\/]+).*\((.+)\%\)", out[1]
             ).groups()
-            data['pos'], data['total'] = map(int, re.search(r'\#(\d+)\/(\d+)\s', out[1]).groups())
+            data["pos"], data["total"] = map(
+                int, re.search(r"\#(\d+)\/(\d+)\s", out[1]).groups()
+            )
             if data["pos"] != pos or counter == 0:
                 pos = data["pos"]
-                playlist = (await shell_read(f"{app['mpc_command']} playlist")).splitlines()
+                new_playlist = (
+                    await shell_read(f"{app['mpc_command']} playlist")
+                ).splitlines()
+                if set(new_playlist) - set(playlist):
+                    await app["bot"].send_message(
+                        config.bot_group_id,
+                        f"added to playlist: {', '.join(set(new_playlist) - set(playlist))}",
+                    )
+                playlist = new_playlist
+
             data["playlist"] = playlist
-            data['number_of_users'] = len(app['websockets'])
+            data["number_of_users"] = len(app["websockets"])
         except Exception as e:
             log.exception(e)
         for ws in app["websockets"]:
@@ -143,6 +160,8 @@ async def add_from_youtube_task(app):
         url = await app["youtube_queue"].get()
         for ws in app["websockets"]:
             await ws.send_json({"name": "radiobot", "text": f"got url {url}"})
+        if app["bot"]:
+            await app["bot"].send_message(config.bot_group_id, f"got url {url}")
         proc = await asyncio.create_subprocess_exec(
             "youtube-dl",
             "-c",
@@ -159,21 +178,21 @@ async def add_from_youtube_task(app):
         if proc.returncode == 0:
             for ws in app["websockets"]:
                 await ws.send_json(
-                    {"name": "radiobot", "text": f" added {stdout.decode()}"}
+                    {"name": "radiobot", "text": f"downloaded {stdout.decode()}"}
                 )
+            if app["bot"]:
+                await app["bot"].send_message(config.bot_group_id, f"downloaded {url}")
 
 
 async def save_history_task(app):
-    path = app['history_file']
-    path_tmp = f'{path}.tmp'
+    path = app["history_file"]
+    path_tmp = f"{path}.tmp"
     while True:
         await asyncio.sleep(20)
-        with open(path_tmp, 'w') as f:
-            json.dump(app['history'], f)
+        with open(path_tmp, "w") as f:
+            json.dump(app["history"], f)
         os.rename(path_tmp, path)
-        log.info(f'History saved to {path}')
-
-
+        log.info(f"History saved to {path}")
 
 
 def favicon_handler(path):
@@ -200,10 +219,10 @@ async def init_app():
     host = config.mpd_host
     if config.mpd_password:
         host = f"{config.mpd_password}@{host}"
-    app["history_file"] = os.path.abspath('history.json')
+    app["history_file"] = os.path.abspath("history.json")
     if os.path.exists(app["history_file"]):
-        with open(app["history_file"], 'r') as f:
-            app['history'] = json.load(f)
+        with open(app["history_file"], "r") as f:
+            app["history"] = json.load(f)
     else:
         app["history"] = []
     app["mpc_command"] = f"mpc --host '{host}' --port {config.mpd_port}"
@@ -212,8 +231,11 @@ async def init_app():
     )
     app["youtube_queue"] = asyncio.Queue()
 
-    app.on_startup.append(create_tasks)
+    # app.on_startup.append(create_tasks)
     app.on_shutdown.append(shutdown)
+    from bot import init_bot
+
+    app.on_startup.append(init_bot)
 
     aiohttp_jinja2.setup(
         app, loader=jinja2.FileSystemLoader(os.path.abspath("templates"))

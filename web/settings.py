@@ -1,8 +1,16 @@
-import os, socket, inspect
+import os, socket, inspect, re
 
 
 class Config:
     def __init__(self):
+        if os.path.exists('.env'):
+            with open('.env', 'r') as f:
+                for line in map(str.strip, f):
+                    line = re.match(r'''(.*)=['"]?([^"']+)"?$''', line)
+                    if line:
+                        key, value = line.groups()
+                        if key not in os.environ:
+                            os.environ[key] = value
         for key, value in inspect.getmembers(Config):
             if key.startswith("_"):
                 continue
@@ -17,6 +25,12 @@ class Config:
     stream_url: str = "http://{hostname}:8000/stream.off".format(
         hostname=socket.gethostname()
     )
+    webhook_host: str = "https://{hostname}".format(
+        hostname=socket.gethostname()
+    )
+    webhook_path: str = "/bot"
+    bot_token: str = ''
+    bot_group_id: int = 0
     listen_host: str = "0.0.0.0"
     listen_port: int = 8080
     history_len: int = 30
